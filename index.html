@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+  <!-- PWA Meta Tags (dynamically updated by pwa.config.js) -->
+  <meta id="meta-desc"        name="description"            content="" />
+  <meta id="meta-theme"       name="theme-color"            content="#0d1117" />
+  <meta id="meta-ms-tile"     name="msapplication-TileColor" content="#0d1117" />
+  <meta id="meta-ms-tile-img" name="msapplication-TileImage" content="icons/icon-144.png" />
+
+  <!-- Apple PWA -->
+  <meta name="apple-mobile-web-app-capable"        content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta id="meta-apple-title" name="apple-mobile-web-app-title" content="" />
+
+  <!-- Open Graph -->
+  <meta id="og-title"       property="og:title"       content="" />
+  <meta id="og-desc"        property="og:description" content="" />
+  <meta id="og-image"       property="og:image"       content="icons/icon-512.png" />
+  <meta                     property="og:type"         content="website" />
+
+  <!-- Icons -->
+  <link id="icon-32"    rel="icon"             type="image/png" sizes="32x32"   href="icons/icon-32.png" />
+  <link id="icon-16"    rel="icon"             type="image/png" sizes="16x16"   href="icons/icon-16.png" />
+  <link id="apple-icon" rel="apple-touch-icon"                  sizes="180x180" href="icons/icon-180.png" />
+  <link id="manifest"   rel="manifest"                                          href="manifest.json" />
+
+  <title id="page-title">Loading...</title>
+
+  <style>
+    /* ── Reset & Base ────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:         #0d1117;
+      --surface:    #161b22;
+      --border:     #30363d;
+      --accent:     #7c3aed;
+      --accent2:    #2563eb;
+      --text:       #e6edf3;
+      --text-muted: #8b949e;
+      --radius:     14px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    html, body {
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    /* ── Splash Screen ───────────────────────────── */
+    #splash {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+
+    #splash.hidden {
+      opacity: 0;
+      transform: scale(1.04);
+      pointer-events: none;
+    }
+
+    .splash-glow {
+      position: absolute;
+      width: 400px;
+      height: 400px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(124,58,237,0.18) 0%, transparent 70%);
+      animation: pulse-glow 3s ease-in-out infinite;
+    }
+
+    @keyframes pulse-glow {
+      0%, 100% { transform: scale(1);    opacity: 0.7; }
+      50%       { transform: scale(1.15); opacity: 1;   }
+    }
+
+    .splash-icon {
+      width: 96px;
+      height: 96px;
+      border-radius: 22px;
+      object-fit: cover;
+      box-shadow: 0 0 0 1px rgba(124,58,237,0.4),
+                  0 0 40px rgba(124,58,237,0.3),
+                  0 16px 48px rgba(0,0,0,0.6);
+      position: relative;
+      z-index: 1;
+      animation: icon-appear 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both;
+    }
+
+    @keyframes icon-appear {
+      from { transform: scale(0.5); opacity: 0; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+
+    .splash-title {
+      margin-top: 20px;
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      position: relative;
+      z-index: 1;
+      animation: fade-up 0.5s ease 0.5s both;
+    }
+
+    .splash-subtitle {
+      margin-top: 6px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      position: relative;
+      z-index: 1;
+      animation: fade-up 0.5s ease 0.6s both;
+    }
+
+    .splash-loader {
+      margin-top: 32px;
+      width: 200px;
+      height: 3px;
+      background: var(--border);
+      border-radius: 99px;
+      overflow: hidden;
+      position: relative;
+      z-index: 1;
+      animation: fade-up 0.5s ease 0.7s both;
+    }
+
+    .splash-loader::after {
+      content: '';
+      position: absolute;
+      left: -60%;
+      top: 0;
+      width: 60%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, var(--accent), var(--accent2), transparent);
+      border-radius: 99px;
+      animation: loader-sweep 1.4s ease-in-out infinite;
+    }
+
+    @keyframes loader-sweep {
+      0%   { left: -60%; }
+      100% { left: 110%; }
+    }
+
+    @keyframes fade-up {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── App Shell (iframe mode) ─────────────────── */
+    #app-shell {
+      display: none;
+      flex-direction: column;
+      height: 100dvh;
+    }
+
+    #app-shell.active { display: flex; }
+
+    /* Top bar */
+    #top-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 14px;
+      height: 48px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      user-select: none;
+    }
+
+    #top-bar-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      object-fit: cover;
+    }
+
+    #top-bar-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text);
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    #open-external-btn {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all var(--transition);
+      flex-shrink: 0;
+    }
+
+    #open-external-btn:hover {
+      background: var(--border);
+      color: var(--text);
+      border-color: var(--accent);
+    }
+
+    #open-external-btn svg {
+      width: 12px;
+      height: 12px;
+      flex-shrink: 0;
+    }
+
+    /* Iframe */
+    #content-frame {
+      flex: 1;
+      border: none;
+      width: 100%;
+      background: var(--bg);
+    }
+
+    /* ── Install Banner ──────────────────────────── */
+    #install-banner {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      z-index: 500;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5),
+                  0 0 0 1px rgba(124,58,237,0.2);
+      min-width: 280px;
+      max-width: 380px;
+      transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      backdrop-filter: blur(12px);
+    }
+
+    #install-banner.visible {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    #install-banner img {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+
+    .install-banner-text { flex: 1; min-width: 0; }
+
+    .install-banner-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+
+    .install-banner-sub {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    .install-banner-actions {
+      display: flex;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .btn-install {
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition);
+      border: none;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+    }
+
+    .btn-install:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(124,58,237,0.4);
+    }
+
+    .btn-dismiss {
+      padding: 7px 10px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-muted);
+      transition: all var(--transition);
+    }
+
+    .btn-dismiss:hover {
+      background: var(--border);
+      color: var(--text);
+    }
+
+    /* ── Offline notice ──────────────────────────── */
+    #offline-toast {
+      position: fixed;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-80px);
+      z-index: 999;
+      background: #b91c1c;
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 99px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      transition: transform 0.3s ease;
+      white-space: nowrap;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    }
+
+    #offline-toast.visible {
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Splash Screen ───────────────────────────────────── -->
+  <div id="splash" role="status" aria-label="Loading application">
+    <div class="splash-glow"></div>
+    <img id="splash-icon" class="splash-icon" src="icons/icon-192.png" alt="App icon" />
+    <div id="splash-title"    class="splash-title">Loading...</div>
+    <div id="splash-subtitle" class="splash-subtitle">Initializing PWA</div>
+    <div class="splash-loader"></div>
+  </div>
+
+  <!-- ── App Shell (iframe mode only) ───────────────────── -->
+  <div id="app-shell">
+    <nav id="top-bar">
+      <img id="top-bar-icon" src="icons/icon-32.png" alt="" />
+      <span id="top-bar-title">App</span>
+      <a id="open-external-btn" href="#" target="_blank" rel="noopener" title="Open in browser">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 2H2.5A.5.5 0 0 0 2 2.5v11a.5.5 0 0 0 .5.5h11a.5.5 0 0 0 .5-.5V10"/>
+          <path d="M9 2h5v5M14 2 8 8"/>
+        </svg>
+        Open
+      </a>
+    </nav>
+    <iframe id="content-frame"
+            title="App Content"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"
+            allow="fullscreen"
+            loading="eager">
+    </iframe>
+  </div>
+
+  <!-- ── Install Banner ─────────────────────────────────── -->
+  <div id="install-banner" role="complementary" aria-label="Install app">
+    <img id="install-icon" src="icons/icon-192.png" alt="App icon" />
+    <div class="install-banner-text">
+      <div id="install-title" class="install-banner-title">Install App</div>
+      <div class="install-banner-sub">Add to your home screen</div>
+    </div>
+    <div class="install-banner-actions">
+      <button class="btn-install"  id="btn-install">Install</button>
+      <button class="btn-dismiss"  id="btn-dismiss">✕</button>
+    </div>
+  </div>
+
+  <!-- ── Offline Toast ───────────────────────────────────── -->
+  <div id="offline-toast">⚡ You are offline</div>
+
+  <!-- ── Scripts ─────────────────────────────────────────── -->
+  <script src="pwa.config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
